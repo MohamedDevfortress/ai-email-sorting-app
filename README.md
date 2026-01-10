@@ -1,160 +1,236 @@
 # AI Email Sorter
 
-An AI-powered email management application that automatically categorizes and summarizes your emails using OpenAI.
+An intelligent email management application that uses AI to automatically categorize and summarize your Gmail emails.
 
 ## Features
 
-- 🔐 **Google OAuth Authentication** - Secure sign-in with your Google account
-- 📧 **Automatic Email Categorization** - AI categorizes emails based on custom categories
-- 📝 **Email Summarization** - Get concise AI-generated summaries of each email
-- 🗂️ **Custom Categories** - Define your own categories with descriptions
-- 📥 **Auto-Archive** - Emails are automatically archived in Gmail after processing
-- 🔔 **Real-time Processing** - Uses Google Pub/Sub for instant email processing
-- 🎨 **Modern UI** - Beautiful interface built with Next.js and Shadcn UI
+- 🤖 **AI-Powered Categorization**: Automatically sorts emails into custom categories using OpenAI
+- 📝 **Smart Summaries**: Get AI-generated summaries of your emails
+- 📧 **Multi-Account Support**: Manage multiple Gmail accounts in one dashboard
+- 🔄 **Real-time Processing**: Webhook-based email processing with Gmail API
+- 🗑️ **Bulk Actions**: Select and delete multiple emails at once
+- 👁️ **Email Detail View**: Read original email content in a modal
+- 🔐 **Secure Authentication**: Google OAuth 2.0 with JWT tokens
 
-## Architecture
+## Tech Stack
 
-### Backend (NestJS)
-- **Auth Module**: Google OAuth with Passport and JWT
-- **Users Module**: User management and profile storage
-- **Categories Module**: CRUD operations for email categories
-- **Gmail Module**: Gmail API integration (watch, history, messages)
-- **AI Module**: OpenAI integration for categorization and summarization
-- **Webhook Module**: Google Pub/Sub webhook handler
-- **Email Processing Queue**: Bull queue with Redis for background processing
+### Backend
+- **NestJS** - Node.js framework
+- **TypeORM** - Database ORM
+- **PostgreSQL** - Database
+- **Bull** - Queue management for email processing
+- **Redis** - Queue storage
+- **OpenAI API** - Email categorization and summarization
+- **Gmail API** - Email fetching and management
+- **Passport.js** - Authentication
 
-### Frontend (Next.js)
-- **Login Page**: Google OAuth flow
-- **Dashboard**: Category management and email viewing
-- **Responsive Design**: Works on desktop and mobile
-
-### Database
-- **PostgreSQL**: User data, categories, and processed emails
-- **Redis**: Job queue for email processing
+### Frontend
+- **Next.js 14** - React framework
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **Shadcn UI** - UI components
 
 ## Prerequisites
 
 - Node.js 18+ and npm
-- Docker and Docker Compose
-- Google Cloud Project with:
-  - Gmail API enabled
-  - Pub/Sub API enabled
-  - OAuth 2.0 credentials
-  - Pub/Sub topic and push subscription
+- PostgreSQL database
+- Redis server
+- Google Cloud Project with Gmail API enabled
 - OpenAI API key
 
-## Setup Instructions
+## Environment Setup
 
-### 1. Clone and Install
-
-```bash
-cd ai-email-sorter
-
-# Install backend dependencies
-cd backend
-npm install
-
-# Install frontend dependencies
-cd ../frontend
-npm install
-```
-
-### 2. Start Docker Services
-
-```bash
-# From the ai-email-sorter directory
-docker-compose up -d
-```
-
-This starts PostgreSQL (port 54321) and Redis (port 63791).
-
-### 3. Configure Backend Environment
+### Backend (.env)
 
 Create `backend/.env`:
 
 ```env
-PORT=3000
+# Database
 DATABASE_HOST=localhost
-DATABASE_PORT=54321
+DATABASE_PORT=5432
 DATABASE_USER=postgres
-DATABASE_PASSWORD=password
-DATABASE_NAME=email_sorter
+DATABASE_PASSWORD=your_password
+DATABASE_NAME=ai_email_sorter
 
+# Redis
 REDIS_HOST=localhost
-REDIS_PORT=63791
+REDIS_PORT=6379
 
+# Google OAuth
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+GOOGLE_CALLBACK_URL=http://localhost:5000/auth/google/callback
 
-OPENAI_API_KEY=your_openai_api_key
+# Gmail API
 GMAIL_TOPIC_NAME=projects/your-project-id/topics/email-notifications
 
-CLIENT_URL=http://localhost:3001
+# JWT
 JWT_SECRET=your_jwt_secret_key
+
+# OpenAI
+OPENAI_API_KEY=your_openai_api_key
+
+# Server
+PORT=5000
+CLIENT_URL=http://localhost:3001
 ```
 
-### 4. Configure Frontend Environment
+### Frontend (.env)
 
-Create `frontend/.env.local`:
+Create `frontend/.env`:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=http://localhost:5000
 ```
 
-### 5. Google Cloud Setup
+## Google Cloud Setup
 
-#### OAuth Credentials
+### 1. Create Google Cloud Project
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create a new project or select existing
-3. Enable Gmail API and Pub/Sub API
-4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
-5. Add authorized redirect URI: `http://localhost:3000/auth/google/callback`
-6. Add test user: `webshookeng@gmail.com`
-7. Copy Client ID and Client Secret to backend `.env`
+2. Create a new project
+3. Enable the Gmail API
 
-#### Pub/Sub Setup
-1. Go to Pub/Sub in Google Cloud Console
-2. Create a topic: `email-notifications`
-3. Create a push subscription:
-   - Endpoint URL: `http://your-deployed-backend-url/webhook/gmail`
-   - For local dev, use [ngrok](https://ngrok.com/): `ngrok http 3000`
-4. Copy the topic name to backend `.env` as `GMAIL_TOPIC_NAME`
+### 2. Configure OAuth Consent Screen
 
-### 6. Run the Application
+1. Go to **APIs & Services** → **OAuth consent screen**
+2. Choose **External** user type
+3. Fill in app information
+4. Add scopes:
+   - `https://www.googleapis.com/auth/gmail.readonly`
+   - `https://www.googleapis.com/auth/gmail.modify`
+   - `https://www.googleapis.com/auth/gmail.labels`
+
+### 3. Create OAuth Credentials
+
+1. Go to **APIs & Services** → **Credentials**
+2. Click **Create Credentials** → **OAuth client ID**
+3. Choose **Web application**
+4. Add authorized redirect URI: `http://localhost:5000/auth/google/callback`
+5. Save the Client ID and Client Secret
+
+### 4. Set Up Pub/Sub for Gmail Webhooks
+
+1. Go to **Pub/Sub** → **Topics**
+2. Create a new topic (e.g., `email-notifications`)
+3. Click on the topic → **PERMISSIONS**
+4. Click **GRANT ACCESS**
+5. Add principal: `gmail-api-push@system.gserviceaccount.com`
+6. Assign role: **Pub/Sub Publisher**
+7. Copy the full topic name (format: `projects/PROJECT_ID/topics/TOPIC_NAME`)
+
+## Installation
+
+### Using Docker (Recommended)
 
 ```bash
-# Terminal 1: Backend
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### Manual Installation
+
+#### 1. Install Dependencies
+
+```bash
+# Backend
+cd backend
+npm install
+
+# Frontend
+cd ../frontend
+npm install
+```
+
+#### 2. Start Services
+
+```bash
+# Start PostgreSQL and Redis (if not using Docker)
+# Using Homebrew on macOS:
+brew services start postgresql
+brew services start redis
+
+# Or use Docker for just the databases:
+docker-compose up -d postgres redis
+```
+
+#### 3. Run Applications
+
+```bash
+# Backend (runs on port 5000)
 cd backend
 npm run start:dev
 
-# Terminal 2: Frontend
+# Frontend (runs on port 3001)
 cd frontend
 npm run dev
 ```
 
-- Frontend: http://localhost:3001
-- Backend: http://localhost:3000
-
-### 7. Initialize Gmail Watch
-
-After logging in, the backend needs to set up a watch on the user's inbox. You can create an endpoint or manually trigger this:
-
-```typescript
-// Call POST /api/setup-watch after user logs in
-// This should be done automatically in production
-```
-
 ## Usage
 
-1. **Sign In**: Click "Sign in with Google" on the homepage
-2. **Create Categories**: Add categories with descriptive names and descriptions
-3. **Automatic Processing**: New emails will be automatically:
-   - Categorized based on AI analysis
-   - Summarized with AI
-   - Archived in Gmail
-   - Displayed in the dashboard
-4. **View Emails**: Click on a category to see all emails sorted into it
+### 1. Sign In
+
+1. Navigate to `http://localhost:3001`
+2. Click **Sign in with Google**
+3. Authorize the application
+
+### 2. Create Categories
+
+1. Go to the dashboard
+2. Click the **+** button in the Categories section
+3. Enter category name and description
+4. The AI will use these descriptions to categorize emails
+
+### 3. Add Multiple Accounts
+
+1. Click **Add Account** in the Connected Accounts section
+2. Select a different Gmail account
+3. Switch between accounts using the account switcher
+
+### 4. Manage Emails
+
+- **View emails** by clicking on a category
+- **Read original content** by clicking on an email
+- **Select emails** using checkboxes
+- **Bulk delete** selected emails
+- **Select all** emails in a category
+
+## Gmail Watch Setup
+
+The application automatically sets up Gmail watch when you log in. The watch:
+- Monitors your inbox for new emails
+- Expires after 7 days
+- Is automatically renewed on each login
+
+**Note**: For local development, you'll need to expose your webhook endpoint using a tool like [ngrok](https://ngrok.com/).
+
+## Project Structure
+
+```
+ai-email-sorter/
+├── backend/                 # NestJS backend
+│   ├── src/
+│   │   ├── auth/           # Google OAuth & JWT
+│   │   ├── users/          # User management
+│   │   ├── categories/     # Email categories
+│   │   ├── emails/         # Email management
+│   │   ├── gmail/          # Gmail API integration
+│   │   ├── ai/             # OpenAI integration
+│   │   └── webhook/        # Gmail webhook processing
+│   └── package.json
+├── frontend/               # Next.js frontend
+│   ├── src/
+│   │   ├── app/           # Pages
+│   │   └── components/    # React components
+│   └── package.json
+└── docker-compose.yml     # Docker services
+```
 
 ## API Endpoints
 
@@ -162,89 +238,81 @@ After logging in, the backend needs to set up a watch on the user's inbox. You c
 - `GET /auth/google` - Initiate Google OAuth
 - `GET /auth/google/callback` - OAuth callback
 
+### Users
+- `GET /users/connected-accounts` - List connected accounts
+- `POST /users/switch-account/:userId` - Switch to another account
+- `DELETE /users/connected-accounts/:id` - Remove account
+
 ### Categories
-- `GET /categories` - List user's categories
-- `POST /categories` - Create new category
-- `GET /categories/:id` - Get category details
-- `PATCH /categories/:id` - Update category
+- `GET /categories` - List categories
+- `POST /categories` - Create category
 - `DELETE /categories/:id` - Delete category
 
 ### Emails
-- `GET /emails` - List user's emails
-- `GET /emails/:id` - Get email details
-
-### Webhook
-- `POST /webhook/gmail` - Receive Gmail push notifications
-
-## Deployment
-
-### Backend Deployment (Render/Fly.io)
-
-1. Build the application:
-```bash
-cd backend
-npm run build
-```
-
-2. Set environment variables on your hosting platform
-
-3. Update `GOOGLE_CALLBACK_URL` to your production URL
-
-4. Update Pub/Sub subscription endpoint to production URL
-
-### Frontend Deployment (Vercel/Netlify)
-
-1. Build the application:
-```bash
-cd frontend
-npm run build
-```
-
-2. Set `NEXT_PUBLIC_API_URL` to your backend URL
-
-3. Deploy to your preferred platform
-
-## Development Notes
-
-- The backend uses TypeORM with `synchronize: true` for development. **Disable this in production!**
-- Gmail watch expires after 7 days - implement a cron job to renew
-- For production, implement proper error handling and logging
-- Consider rate limiting for API endpoints
-- Add refresh token rotation for better security
-
-## Testing
-
-```bash
-# Backend tests
-cd backend
-npm run test
-
-# Frontend tests
-cd frontend
-npm run test
-```
+- `GET /emails` - List emails
+- `GET /emails/:id/original` - Get original email content
+- `DELETE /emails/bulk` - Bulk delete emails
 
 ## Troubleshooting
 
-### Port Conflicts
-If you encounter port conflicts, the docker-compose.yml uses non-standard ports:
-- PostgreSQL: 54321 (instead of 5432)
-- Redis: 63791 (instead of 6379)
+### OAuth Errors
 
-### OAuth Issues
-- Ensure test user is added in Google Cloud Console
-- Check redirect URI matches exactly
-- Verify scopes are correct in GoogleStrategy
+**Error**: `redirect_uri_mismatch`
+- Ensure `GOOGLE_CALLBACK_URL` matches the authorized redirect URI in Google Cloud Console
+- Check that the port is correct (5000 for backend)
 
-### Pub/Sub Not Working
-- Check ngrok is running for local development
-- Verify subscription endpoint URL is correct
-- Check Google Cloud logs for delivery failures
+### Token Expired
+
+**Error**: `401 Unauthorized` when fetching emails
+- Log out and log back in to refresh OAuth tokens
+- Tokens expire after ~1 hour but are automatically refreshed
+
+### Gmail Watch Not Working
+
+- Ensure Pub/Sub topic is created and permissions are granted
+- Check that `GMAIL_TOPIC_NAME` is correct in `.env`
+- For local development, use ngrok to expose the webhook endpoint
+
+## Development
+
+### Running Tests
+
+```bash
+# Backend
+cd backend
+npm run test
+
+# Frontend
+cd frontend
+npm run test
+```
+
+### Building for Production
+
+```bash
+# Backend
+cd backend
+npm run build
+npm run start:prod
+
+# Frontend
+cd frontend
+npm run build
+npm start
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes using conventional commits
+4. Push to your fork
+5. Create a Pull Request
 
 ## License
 
 MIT
 
-## Contributing
+## Support
 
-This is a challenge submission project. For production use, please add proper error handling, tests, and security measures.
+For issues and questions, please open an issue on GitHub.
