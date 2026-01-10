@@ -213,6 +213,7 @@ export default function DashboardContent() {
                           <Label htmlFor="name">Name</Label>
                           <Input
                             id="name"
+                            className='my-2'
                             value={newCategory.name}
                             onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
                             placeholder="e.g., Newsletters"
@@ -222,6 +223,7 @@ export default function DashboardContent() {
                           <Label htmlFor="description">Description</Label>
                           <Textarea
                             id="description"
+                            className='my-2'
                             value={newCategory.description}
                             onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
                             placeholder="Describe what emails belong in this category..."
