@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PlusCircle, Check, Trash2 } from 'lucide-react';
 
 interface ConnectedAccount {
@@ -130,15 +131,24 @@ export default function AccountSwitcher({ token }: AccountSwitcherProps) {
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <Avatar>
                   <AvatarFallback>{account.email[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="font-medium flex items-center gap-2">
-                    {account.email}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="truncate cursor-default">{account.email}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{account.email}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     {account.isActive && (
-                      <Badge variant="default" className="text-xs">
+                      <Badge variant="default" className="text-xs flex-shrink-0">
                         Active
                       </Badge>
                     )}
@@ -148,7 +158,7 @@ export default function AccountSwitcher({ token }: AccountSwitcherProps) {
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-shrink-0">
                 {!account.isActive && (
                   <Button
                     size="sm"
