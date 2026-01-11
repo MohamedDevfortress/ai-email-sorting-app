@@ -1,5 +1,7 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Res } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 import { EmailsService } from './emails.service';
 import { CreateEmailDto } from './dto/create-email.dto';
 import { UpdateEmailDto } from './dto/update-email.dto';
@@ -13,6 +15,7 @@ export class EmailsController {
     private readonly emailsService: EmailsService,
     private readonly gmailService: GmailService,
     private readonly usersService: UsersService,
+    @InjectQueue('unsubscribe-queue') private readonly unsubscribeQueue: Queue,
   ) {}
 
   @Post()
@@ -71,5 +74,55 @@ export class EmailsController {
     }
 
     return { success: true, deleted: body.emailIds.length };
+  }
+
+  @Post('unsubscribe')
+  async bulkUnsubscribe(@Body() body: { emailIds: string[] }, @Req() req, @Res() res) {
+    try {
+      const job = await this.unsubscribeQueue.add('process-unsubscribe', {
+        emailIds: body.emailIds,
+        userId: req.user.userId,
+      });
+
+      return res.json({
+        success: true,
+        message: 'Unsubscribe process started',
+        jobId: job.id,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
+
+  @Get('unsubscribe/status/:jobId')
+  async getUnsubscribeStatus(@Param('jobId') jobId: string) {
+    try {
+      const job = await this.unsubscribeQueue.getJob(jobId);
+      
+      if (!job) {
+        return {
+          status: 'not_found',
+          message: 'Job not found',
+        };
+      }
+
+      const state = await job.getState();
+      const progress = job.progress();
+      const result = job.returnvalue;
+
+      return {
+        status: state,
+        progress,
+        result,
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        error: error.message,
+      };
+    }
   }
 }

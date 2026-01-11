@@ -38,6 +38,9 @@ export default function DashboardContent() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const [unsubscribeJobId, setUnsubscribeJobId] = useState<string | null>(null);
+  const [unsubscribeProgress, setUnsubscribeProgress] = useState<any>(null);
+  const [showUnsubscribeModal, setShowUnsubscribeModal] = useState(false);
 
   useEffect(() => {
     const tokenFromUrl = searchParams.get('token');
@@ -165,6 +168,68 @@ export default function DashboardContent() {
     } catch (error) {
       console.error('Failed to delete emails:', error);
     }
+  };
+
+  const handleBulkUnsubscribe = async () => {
+    if (selectedEmails.size === 0) return;
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+    if (!confirm(`Attempt to unsubscribe from ${selectedEmails.size} email sender(s)? This will use AI to automatically navigate unsubscribe links.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/emails/unsubscribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ emailIds: Array.from(selectedEmails) }),
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.jobId) {
+        setUnsubscribeJobId(data.jobId);
+        setShowUnsubscribeModal(true);
+        pollUnsubscribeStatus(data.jobId);
+      } else {
+        alert('Failed to start unsubscribe process');
+      }
+    } catch (error) {
+      console.error('Failed to unsubscribe:', error);
+      alert('Failed to start unsubscribe process');
+    }
+  };
+
+  const pollUnsubscribeStatus = async (jobId: string) => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_URL}/emails/unsubscribe/status/${jobId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const status = await res.json();
+        setUnsubscribeProgress(status);
+
+        if (status.status === 'completed' || status.status === 'failed') {
+          clearInterval(pollInterval);
+          // Refresh email list immediately
+          if (selectedCategory) {
+            fetchEmails(selectedCategory);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to poll status:', error);
+        clearInterval(pollInterval);
+      }
+    }, 2000); // Poll every 2 seconds
   };
 
   if (!token) {
@@ -300,7 +365,7 @@ export default function DashboardContent() {
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled
+                            onClick={handleBulkUnsubscribe}
                           >
                             Unsubscribe ({selectedEmails.size})
                           </Button>
@@ -377,6 +442,126 @@ export default function DashboardContent() {
             setSelectedEmailId(null);
           }}
         />
+      )}
+
+      {/* Unsubscribe Progress Modal */}
+      {showUnsubscribeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-lg font-semibold">Unsubscribing...</h3>
+              <button
+                onClick={() => {
+                  setShowUnsubscribeModal(false);
+                  setUnsubscribeJobId(null);
+                  setUnsubscribeProgress(null);
+                  setSelectedEmails(new Set());
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            {unsubscribeProgress ? (
+              <div className="space-y-4">
+                <div className="flex justify-between text-sm">
+                  <span>Status:</span>
+                  <span className="font-medium capitalize">{unsubscribeProgress.status}</span>
+                </div>
+                
+                {unsubscribeProgress.progress !== undefined && (
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span>Progress:</span>
+                      <span className="font-medium">{unsubscribeProgress.progress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${unsubscribeProgress.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {unsubscribeProgress.result && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded text-sm">
+                    <div className="font-medium mb-2">Results:</div>
+                    <div>Total: {unsubscribeProgress.result.total}</div>
+                    <div className="text-green-600">Successful: {unsubscribeProgress.result.successful}</div>
+                    <div className="text-red-600">Failed: {unsubscribeProgress.result.failed}</div>
+                    
+                    {/* Show failed emails with links */}
+                    {unsubscribeProgress.result.results && 
+                     unsubscribeProgress.result.results.filter((r: any) => !r.success && r.link).length > 0 && (
+                      <div className="mt-3 border-t pt-3">
+                        <div className="font-medium mb-2 text-gray-700">Manual Unsubscribe:</div>
+                        <div className="space-y-2">
+                          {unsubscribeProgress.result.results
+                            .filter((r: any) => !r.success && r.link)
+                            .map((r: any, idx: number) => (
+                              <div key={idx} className="text-xs">
+                                <a 
+                                  href={r.link} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline flex items-center gap-1"
+                                >
+                                  <span>Click to unsubscribe manually</span>
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                </a>
+                                {r.error && (
+                                  <div className="text-gray-500 ml-4">Reason: {r.error}</div>
+                                )}
+                              </div>
+                            ))
+                          }
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {unsubscribeProgress.status === 'completed' && (
+                  <div className="text-green-600 text-sm">
+                    ✓ Unsubscribe process completed
+                  </div>
+                )}
+
+                {unsubscribeProgress.status === 'failed' && (
+                  <div className="text-red-600 text-sm">
+                    ✗ Unsubscribe process failed
+                  </div>
+                )}
+
+                {/* Close button when completed or failed */}
+                {(unsubscribeProgress.status === 'completed' || unsubscribeProgress.status === 'failed') && (
+                  <button
+                    onClick={() => {
+                      setShowUnsubscribeModal(false);
+                      setUnsubscribeJobId(null);
+                      setUnsubscribeProgress(null);
+                      setSelectedEmails(new Set());
+                    }}
+                    className="w-full mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Close
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-sm text-gray-600">Initializing...</p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

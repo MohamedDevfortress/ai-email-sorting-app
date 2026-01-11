@@ -98,4 +98,83 @@ Summary:`;
 
     return response.choices[0].message.content?.trim() || 'No summary available';
   }
+
+  /**
+   * Analyze an unsubscribe page and determine what actions to take
+   */
+  async analyzeUnsubscribePage(
+    pageStructure: any,
+    userEmail: string,
+  ): Promise<{ actions: any[]; reasoning: string }> {
+    try {
+      const prompt = `You are helping to automatically unsubscribe from an email list. 
+Analyze this web page structure and determine the exact steps needed to complete the unsubscribe process.
+
+User's email: ${userEmail}
+
+Page structure:
+${JSON.stringify(pageStructure, null, 2)}
+
+Provide a JSON response with:
+1. "actions": An array of actions to perform, each with:
+   - "type": "fill", "click", "check", or "select"
+   - "selector": The CSS selector or element identifier
+   - "value": The value to fill/select (if applicable)
+   - "description": Human-readable description of the action
+
+2. "reasoning": Brief explanation of why these actions will unsubscribe
+
+Important:
+- Only fill required fields
+- Use the user's email if an email confirmation is needed
+- Prefer clicking "Unsubscribe" or "Confirm" buttons
+- Check checkboxes labeled "unsubscribe" or "opt out"
+- If no actions needed (already unsubscribed), return empty actions array
+
+Example response:
+{
+  "actions": [
+    { "type": "fill", "selector": "#email", "value": "${userEmail}", "description": "Fill email confirmation field" },
+    { "type": "check", "selector": "#confirm", "description": "Check confirmation checkbox" },
+    { "type": "click", "selector": "button[type='submit']", "description": "Submit unsubscribe form" }
+  ],
+  "reasoning": "Page requires email confirmation and checkbox before submission"
+}`;
+
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert at web automation. Analyze web pages and provide precise instructions for form filling and interaction. Always respond with valid JSON.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.3,
+        max_tokens: 500,
+        response_format: { type: 'json_object' },
+      });
+
+      const response = completion.choices[0]?.message?.content;
+      if (!response) {
+        throw new Error('No response from AI');
+      }
+
+      const result = JSON.parse(response);
+      
+      return {
+        actions: result.actions || [],
+        reasoning: result.reasoning || 'AI analysis completed',
+      };
+    } catch (error) {
+      console.error('AI analysis error:', error);
+      return {
+        actions: [],
+        reasoning: 'Failed to analyze page with AI',
+      };
+    }
+  }
 }
