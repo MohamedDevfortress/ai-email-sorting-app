@@ -566,35 +566,43 @@ export default function DashboardContent() {
                     <div className="text-green-600">Successful: {unsubscribeProgress.result.successful}</div>
                     <div className="text-red-600">Failed: {unsubscribeProgress.result.failed}</div>
                     
-                    {/* Show failed emails with links */}
+                    {/* Show all failed emails */}
                     {unsubscribeProgress.result.results && 
-                     unsubscribeProgress.result.results.filter((r: any) => !r.success && r.link).length > 0 && (
+                     unsubscribeProgress.result.results.filter((r: any) => !r.success).length > 0 && (
                       <div className="mt-3 border-t pt-3">
-                        <div className="font-medium mb-2 text-gray-700">Manual Unsubscribe:</div>
+                        <div className="font-medium mb-2 text-gray-700">Failed Items:</div>
                         <div className="space-y-2">
                           {unsubscribeProgress.result.results
-                            .filter((r: any) => !r.success && r.link)
+                            .filter((r: any) => !r.success)
                             .map((r: any, idx: number) => (
-                              <div key={idx} className="text-xs">
-                                <a 
-                                  href={r.link} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline flex items-center gap-1"
-                                >
-                                  <span>Click to unsubscribe manually</span>
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                  </svg>
-                                </a>
+                              <div key={idx} className="text-xs bg-red-50 p-2 rounded border border-red-200">
+                                {r.link && (
+                                  <a 
+                                    href={r.link} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline flex items-center gap-1"
+                                  >
+                                    <span>Click to unsubscribe manually</span>
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                    </svg>
+                                  </a>
+                                )}
                                 {r.isCloudflare && (
                                   <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200 ml-2 mt-1">
                                     🛡️ Cloudflare Protected
                                   </span>
                                 )}
                                 {r.error && (
-                                  <div className="text-gray-500 ml-4 mt-1">
-                                    Reason: {r.isCloudflare ? "Site uses anti-bot protection" : r.error}
+                                  <div className="mt-1 font-medium">
+                                    {r.error === 'No unsubscribe links found' ? (
+                                      <span className="text-red-700">❌ No unsubscribe link found in this email</span>
+                                    ) : r.isCloudflare ? (
+                                      <span className="text-gray-700">Site uses anti-bot protection</span>
+                                    ) : (
+                                      <span className="text-gray-700">Error: {r.error}</span>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -657,6 +665,7 @@ export default function DashboardContent() {
       {/* Screenshot Modal */}
       <ScreenshotModal 
         screenshot={screenshot}
+        isOpen={showScreenshotModal}
         onClose={() => setShowScreenshotModal(false)}
       />
     </div>

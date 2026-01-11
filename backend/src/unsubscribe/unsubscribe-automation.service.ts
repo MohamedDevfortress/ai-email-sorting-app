@@ -76,12 +76,14 @@ export class UnsubscribeAutomationService {
         const stillCloudflare = await this.detectCloudflare(page);
         if (stillCloudflare) {
           console.log('Cloudflare challenge did not resolve');
+          const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
           await page.close();
           return {
             success: false,
             message: 'Page protected by Cloudflare. Please visit the link manually.',
             error: 'Cloudflare protection detected',
             isCloudflare: true,
+            screenshot: screenshot.toString('base64'),
           };
         }
       }
@@ -90,10 +92,12 @@ export class UnsubscribeAutomationService {
       const successDetected = await this.detectSuccessMessage(page);
       if (successDetected) {
         console.log('Auto-unsubscribe detected! Page shows success message.');
+        const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
         await page.close();
         return {
           success: true,
           message: 'Successfully unsubscribed (auto-detected)',
+          screenshot: screenshot.toString('base64'),
         };
       }
 
@@ -106,6 +110,7 @@ export class UnsubscribeAutomationService {
         // Wait a bit and check for success message
         await page.waitForTimeout(2000);
         const finalCheck = await this.detectSuccessMessage(page);
+        const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
         
         await page.close();
         return {
@@ -113,6 +118,7 @@ export class UnsubscribeAutomationService {
           message: finalCheck 
             ? 'Successfully completed unsubscribe form'
             : 'Clicked unsubscribe button (assumed success)',
+          screenshot: screenshot.toString('base64'),
         };
       }
 
@@ -136,6 +142,7 @@ export class UnsubscribeAutomationService {
             // Check for success message
             await page.waitForTimeout(2000);
             const successCheck = await this.detectSuccessMessage(page);
+            const screenshot = await page.screenshot({ fullPage: true, type: 'png' });
             
             await page.close();
             return {
@@ -143,6 +150,7 @@ export class UnsubscribeAutomationService {
               message: successCheck
                 ? 'Successfully unsubscribed using AI-powered form filling'
                 : 'Completed AI-suggested actions (assumed success)',
+              screenshot: screenshot.toString('base64'),
             };
           }
         }
@@ -166,7 +174,13 @@ export class UnsubscribeAutomationService {
     } catch (error) {
       console.error('Unsubscribe automation error:', error);
       
+      let screenshot: string | undefined;
       if (page) {
+        try {
+          screenshot = (await page.screenshot({ fullPage: true, type: 'png' })).toString('base64');
+        } catch (e) {
+          console.error('Failed to capture screenshot:', e);
+        }
         try {
           await page.close();
         } catch (e) {
@@ -178,6 +192,7 @@ export class UnsubscribeAutomationService {
         success: false,
         message: 'Failed to process unsubscribe link',
         error: error.message,
+        screenshot,
       };
     }
   }

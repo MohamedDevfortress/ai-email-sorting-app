@@ -3,17 +3,18 @@ import Image from 'next/image';
 
 interface ScreenshotModalProps {
   screenshot: string | null; // base64 string
+  isOpen: boolean;
   onClose: () => void;
 }
 
-export default function ScreenshotModal({ screenshot, onClose }: ScreenshotModalProps) {
-  if (!screenshot) return null;
+export default function ScreenshotModal({ screenshot, isOpen, onClose }: ScreenshotModalProps) {
+  if (!isOpen || !screenshot) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-      <div className="relative max-w-6xl max-h-[90vh] bg-white rounded-lg shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-lg shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center justify-between p-4 border-b flex-shrink-0">
           <h3 className="text-lg font-semibold">Unsubscribe Screenshot</h3>
           <button
             onClick={onClose}
@@ -25,8 +26,8 @@ export default function ScreenshotModal({ screenshot, onClose }: ScreenshotModal
           </button>
         </div>
 
-        {/* Screenshot */}
-        <div className="p-6 overflow-auto max-h-[calc(90vh-80px)]">
+        {/* Screenshot - scrollable area */}
+        <div className="p-6 overflow-auto flex-1 min-h-0">
           <img 
             src={`data:image/png;base64,${screenshot}`} 
             alt="Unsubscribe process screenshot"
@@ -34,8 +35,8 @@ export default function ScreenshotModal({ screenshot, onClose }: ScreenshotModal
           />
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
+        {/* Footer - always visible */}
+        <div className="flex justify-end gap-2 p-4 border-t bg-gray-50 flex-shrink-0">
           <a
             href={`data:image/png;base64,${screenshot}`}
             download="unsubscribe-screenshot.png"
