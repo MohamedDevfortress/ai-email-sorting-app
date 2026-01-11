@@ -6,6 +6,9 @@ An intelligent email management application that uses AI to automatically catego
 
 <img width="1440" height="837" alt="image" src="https://github.com/user-attachments/assets/a7b5b7df-7b83-4751-b8e3-0899183b6a2a" />
 
+<img width="1438" height="797" alt="image" src="https://github.com/user-attachments/assets/68d79c1e-33c6-47c2-a762-685df47b127b" />
+
+
 
 
 ## Features
