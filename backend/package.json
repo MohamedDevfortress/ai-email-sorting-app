@@ -1,7 +1,7 @@
 {
   "name": "backend",
-  "version": "0.0.1",
-  "description": "",
+  "version": "1.0.0",
+  "description": "AI Email Sorter Backend",
   "author": "",
   "private": true,
   "license": "UNLICENSED",
