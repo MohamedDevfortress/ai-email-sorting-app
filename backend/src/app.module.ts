@@ -34,11 +34,8 @@ import { EmailsModule } from './emails/emails.module';
     }),
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        redis: {
-          host: configService.get('REDIS_HOST'),
-          port: configService.get('REDIS_PORT'),
-        },
+      useFactory: async (configService: ConfigService) => ({
+        url: configService.get<string>('REDIS_URL')
       }),
       inject: [ConfigService],
     }),

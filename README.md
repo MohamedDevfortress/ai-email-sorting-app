@@ -53,8 +53,7 @@ DATABASE_PASSWORD=your_password
 DATABASE_NAME=ai_email_sorter
 
 # Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
+REDIS_URL=redis://localhost:6379
 
 # Google OAuth
 GOOGLE_CLIENT_ID=your_google_client_id
