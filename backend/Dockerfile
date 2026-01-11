@@ -1,5 +1,5 @@
 # Use Node.js 22 with Playwright dependencies pre-installed
-FROM mcr.microsoft.com/playwright:v1.49.0-noble
+FROM mcr.microsoft.com/playwright:v1.57.0-noble
 
 # Set working directory
 WORKDIR /app
