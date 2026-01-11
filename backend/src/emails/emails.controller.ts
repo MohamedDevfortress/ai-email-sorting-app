@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Res, Query } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
@@ -24,8 +24,18 @@ export class EmailsController {
   }
 
   @Get()
-  findAll(@Req() req) {
-    return this.emailsService.findAll(req.user.userId);
+  @UseGuards(AuthGuard('jwt'))
+  findAll(
+    @Req() req,
+    @Query('categoryId') categoryId?: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ) {
+    const userId = req.user.userId;
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    
+    return this.emailsService.findAll(userId, categoryId, pageNum, limitNum);
   }
 
   @Get(':id')

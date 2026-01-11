@@ -19,8 +19,37 @@ export class EmailsService {
     return this.emailRepository.save(email);
   }
 
-  async findAll(userId: string) {
-      return this.emailRepository.find({ where: { user: { id: userId } } });
+  async findAll(userId: string, categoryId?: string, page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.emailRepository
+      .createQueryBuilder('email')
+      .where('email.userId = :userId', { userId });
+
+    // Filter by category if provided
+    if (categoryId) {
+      queryBuilder.andWhere('email.categoryId = :categoryId', { categoryId });
+    }
+
+    // Get total count for pagination
+    const total = await queryBuilder.getCount();
+
+    // Get paginated results
+    const emails = await queryBuilder
+      .orderBy('email.receivedAt', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getMany();
+
+    return {
+      data: emails,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async findOne(id: string, userId: string) {

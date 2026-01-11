@@ -42,6 +42,12 @@ export default function DashboardContent() {
   const [unsubscribeJobId, setUnsubscribeJobId] = useState<string | null>(null);
   const [unsubscribeProgress, setUnsubscribeProgress] = useState<any>(null);
   const [showUnsubscribeModal, setShowUnsubscribeModal] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalEmails, setTotalEmails] = useState(0);
+  const [pageLimit] = useState(20);
 
   useEffect(() => {
     const tokenFromUrl = searchParams.get('token');
@@ -90,12 +96,17 @@ export default function DashboardContent() {
     }
   };
 
-  const fetchEmails = async (categoryId: string) => {
-    const data = await api.get<(Email & { categoryId: string })[]>('/emails', { token: token!, router });
+  const fetchEmails = async (categoryId: string, page: number = 1) => {
+    const data = await api.get<{
+      data: (Email & { categoryId: string })[];
+      meta: { total: number; page: number; limit: number; totalPages: number };
+    }>(`/emails?categoryId=${categoryId}&page=${page}&limit=${pageLimit}`, { token: token!, router });
+    
     if (data) {
-      // Filter by category (backend should ideally support this)
-      const filtered = data.filter(email => email.categoryId === categoryId);
-      setEmails(filtered);
+      setEmails(data.data);
+      setCurrentPage(data.meta.page);
+      setTotalPages(data.meta.totalPages);
+      setTotalEmails(data.meta.total);
     }
   };
 
@@ -118,6 +129,19 @@ export default function DashboardContent() {
   const handleDeleteCategory = async (categoryId: string) => {
     localStorage.removeItem('token');
     router.push('/');
+  };
+
+  const handleOpenCategory = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setCurrentPage(1); // Reset to first page when changing category
+    fetchEmails(categoryId, 1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages && selectedCategory) {
+      setCurrentPage(newPage);
+      fetchEmails(selectedCategory, newPage);
+    }
   };
 
   const handleSelectAll = () => {
@@ -410,10 +434,60 @@ export default function DashboardContent() {
                       </div>
                     ))}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  )}
+
+                  {/* Pagination Controls */}
+                  {selectedCategory && totalPages > 1 && (
+                    <div className="mt-6 flex items-center justify-between border-t pt-4">
+                      <div className="text-sm text-gray-600">
+                        Showing {emails.length} of {totalEmails} emails
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(currentPage - 1)}
+                          disabled={currentPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            const pageNum = currentPage <= 3 
+                              ? i + 1 
+                              : currentPage >= totalPages - 2
+                              ? totalPages - 4 + i
+                              : currentPage - 2 + i;
+                            
+                            if (pageNum < 1 || pageNum > totalPages) return null;
+                            
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={currentPage === pageNum ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handlePageChange(pageNum)}
+                                className="w-10"
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
         </div>
       </main>
 
