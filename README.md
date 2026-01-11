@@ -2,6 +2,12 @@
 
 An intelligent email management application that uses AI to automatically categorize and summarize your Gmail emails.
 
+<img width="1440" height="837" alt="image" src="https://github.com/user-attachments/assets/82d082b8-8026-4af6-9e9a-9ababb3bb1a3" />
+
+<img width="1440" height="837" alt="image" src="https://github.com/user-attachments/assets/a7b5b7df-7b83-4751-b8e3-0899183b6a2a" />
+
+
+
 ## Features
 
 - 🤖 **AI-Powered Categorization**: Automatically sorts emails into custom categories using OpenAI
