@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Mail, LogOut } from 'lucide-react';
 import AccountSwitcher from '@/components/AccountSwitcher';
 import EmailDetailModal from '@/components/EmailDetailModal';
+import { api } from '@/lib/api';
 
 interface Category {
   id: string;
@@ -71,57 +72,50 @@ export default function DashboardContent() {
     }
   }, [token, selectedCategory]);
 
+  // Handle API errors (especially 401 unauthorized)
+  const handleApiError = (response: Response) => {
+    if (response.status === 401) {
+      console.log('Token expired, logging out...');
+      localStorage.removeItem('token');
+      router.push('/');
+      return true;
+    }
+    return false;
+  };
+
   const fetchCategories = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/categories`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCategories(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch categories:', error);
+    const data = await api.get<Category[]>('/categories', { token: token!, router });
+    if (data) {
+      setCategories(data);
     }
   };
 
   const fetchEmails = async (categoryId: string) => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/emails`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        // Filter by category (backend should ideally support this)
-        const filtered = data.filter((email: Email & { categoryId: string }) => email.categoryId === categoryId);
-        setEmails(filtered);
-      }
-    } catch (error) {
-      console.error('Failed to fetch emails:', error);
+    const data = await api.get<(Email & { categoryId: string })[]>('/emails', { token: token!, router });
+    if (data) {
+      // Filter by category (backend should ideally support this)
+      const filtered = data.filter(email => email.categoryId === categoryId);
+      setEmails(filtered);
     }
   };
 
   const handleAddCategory = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/categories`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(newCategory),
-      });
-      if (res.ok) {
-        setIsAddCategoryOpen(false);
-        setNewCategory({ name: '', description: '' });
-        fetchCategories();
-      }
-    } catch (error) {
-      console.error('Failed to add category:', error);
+    if (!newCategory.name.trim()) return;
+
+    const result = await api.post('/categories', newCategory, { token: token!, router });
+    if (result) {
+      setNewCategory({ name: '', description: '' });
+      setIsAddCategoryOpen(false);
+      fetchCategories();
     }
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    router.push('/');
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
     localStorage.removeItem('token');
     router.push('/');
   };
@@ -149,24 +143,16 @@ export default function DashboardContent() {
     
     if (!confirm(`Delete ${selectedEmails.size} email(s)?`)) return;
 
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/emails/bulk`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ emailIds: Array.from(selectedEmails) }),
-      });
-
-      if (res.ok) {
-        setSelectedEmails(new Set());
-        if (selectedCategory) {
-          fetchEmails(selectedCategory);
-        }
+    const result = await api.deleteWithBody('/emails/bulk', 
+      { emailIds: Array.from(selectedEmails) }, 
+      { token: token!, router }
+    );
+    
+    if (result) {
+      setSelectedEmails(new Set());
+      if (selectedCategory) {
+        await fetchEmails(selectedCategory);
       }
-    } catch (error) {
-      console.error('Failed to delete emails:', error);
     }
   };
 

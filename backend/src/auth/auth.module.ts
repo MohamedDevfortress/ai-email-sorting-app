@@ -15,7 +15,7 @@ import { GmailModule } from '../gmail/gmail.module';
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'secretKey',
-      signOptions: { expiresIn: '60m' },
+      signOptions: { expiresIn: '7d' }, // 7 days
     }),
   ],
   controllers: [AuthController],
