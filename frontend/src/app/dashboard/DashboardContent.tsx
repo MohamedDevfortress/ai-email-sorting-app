@@ -575,8 +575,15 @@ export default function DashboardContent() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                   </svg>
                                 </a>
+                                {r.isCloudflare && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200 ml-2 mt-1">
+                                    🛡️ Cloudflare Protected
+                                  </span>
+                                )}
                                 {r.error && (
-                                  <div className="text-gray-500 ml-4">Reason: {r.error}</div>
+                                  <div className="text-gray-500 ml-4 mt-1">
+                                    Reason: {r.isCloudflare ? "Site uses anti-bot protection" : r.error}
+                                  </div>
                                 )}
                               </div>
                             ))

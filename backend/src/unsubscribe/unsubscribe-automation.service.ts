@@ -7,6 +7,7 @@ export interface UnsubscribeResult {
   message: string;
   screenshot?: string;
   error?: string;
+  isCloudflare?: boolean;
 }
 
 @Injectable()
@@ -80,6 +81,7 @@ export class UnsubscribeAutomationService {
             success: false,
             message: 'Page protected by Cloudflare. Please visit the link manually.',
             error: 'Cloudflare protection detected',
+            isCloudflare: true,
           };
         }
       }

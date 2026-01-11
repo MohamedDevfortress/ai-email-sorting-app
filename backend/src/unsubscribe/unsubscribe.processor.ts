@@ -13,6 +13,7 @@ interface UnsubscribeResult {
   message?: string;
   error?: string;
   link?: string;
+  isCloudflare?: boolean;
 }
 
 @Processor('unsubscribe-queue')
@@ -125,6 +126,7 @@ export class UnsubscribeProcessor {
           success: result.success,
           message: result.message,
           link: bestLink.url,
+          isCloudflare: result.isCloudflare || false,
         });
 
         // Log result
