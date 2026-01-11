@@ -14,6 +14,7 @@ interface UnsubscribeResult {
   error?: string;
   link?: string;
   isCloudflare?: boolean;
+  screenshot?: string; // Base64 screenshot
 }
 
 @Processor('unsubscribe-queue')
@@ -127,6 +128,7 @@ export class UnsubscribeProcessor {
           message: result.message,
           link: bestLink.url,
           isCloudflare: result.isCloudflare || false,
+          screenshot: result.screenshot, // Include screenshot from automation
         });
 
         // Log result

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Mail, LogOut } from 'lucide-react';
 import AccountSwitcher from '@/components/AccountSwitcher';
 import EmailDetailModal from '@/components/EmailDetailModal';
+import ScreenshotModal from '@/components/ScreenshotModal';
 import { api } from '@/lib/api';
 
 interface Category {
@@ -42,6 +43,8 @@ export default function DashboardContent() {
   const [unsubscribeJobId, setUnsubscribeJobId] = useState<string | null>(null);
   const [unsubscribeProgress, setUnsubscribeProgress] = useState<any>(null);
   const [showUnsubscribeModal, setShowUnsubscribeModal] = useState(false);
+  const [screenshot, setScreenshot] = useState<string | null>(null);
+  const [showScreenshotModal, setShowScreenshotModal] = useState(false);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -230,7 +233,16 @@ export default function DashboardContent() {
 
         if (status.status === 'completed' || status.status === 'failed') {
           clearInterval(pollInterval);
-          // Refresh email list immediately
+          
+          // Extract screenshot from first result that has one
+          if (status.result?.results) {
+            const resultWithScreenshot = status.result.results.find((r: any) => r.screenshot);
+            if (resultWithScreenshot) {
+              setScreenshot(resultWithScreenshot.screenshot);
+            }
+          }
+          
+          // Refresh email list
           if (selectedCategory) {
             fetchEmails(selectedCategory);
           }
@@ -608,17 +620,28 @@ export default function DashboardContent() {
 
                 {/* Close button when completed or failed */}
                 {(unsubscribeProgress.status === 'completed' || unsubscribeProgress.status === 'failed') && (
-                  <button
-                    onClick={() => {
-                      setShowUnsubscribeModal(false);
-                      setUnsubscribeJobId(null);
-                      setUnsubscribeProgress(null);
-                      setSelectedEmails(new Set());
-                    }}
-                    className="w-full mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Close
-                  </button>
+                  <div className="space-y-2 mt-4">
+                    {screenshot && (
+                      <button
+                        onClick={() => setShowScreenshotModal(true)}
+                        className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                      >
+                        View Screenshot
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setShowUnsubscribeModal(false);
+                        setUnsubscribeJobId(null);
+                        setUnsubscribeProgress(null);
+                        setSelectedEmails(new Set());
+                        setScreenshot(null);
+                      }}
+                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
                 )}
               </div>
             ) : (
@@ -630,6 +653,12 @@ export default function DashboardContent() {
           </div>
         </div>
       )}
+
+      {/* Screenshot Modal */}
+      <ScreenshotModal 
+        screenshot={screenshot}
+        onClose={() => setShowScreenshotModal(false)}
+      />
     </div>
   );
 }
