@@ -94,18 +94,18 @@ export class EmailsController {
     await this.emailsService.bulkDelete(body.emailIds, req.user.userId);
     console.log(`Deleted ${body.emailIds.length} emails from database`);
 
-    // Delete from Gmail
+    // Delete from Gmail (move to trash)
     let gmailDeletedCount = 0;
     const errors: Array<{ emailId: string; error: string }> = [];
     
     for (const emailData of emailsToDelete) {
       try {
-        console.log(`Attempting to delete Gmail message: ${emailData.googleMessageId}`);
-        await this.gmailService.permanentlyDeleteMessage(user, emailData.googleMessageId);
+        console.log(`Moving to trash Gmail message: ${emailData.googleMessageId}`);
+        await this.gmailService.trashMessage(user, emailData.googleMessageId);
         gmailDeletedCount++;
-        console.log(`Successfully deleted from Gmail: ${emailData.googleMessageId}`);
+        console.log(`Successfully moved to trash: ${emailData.googleMessageId}`);
       } catch (error) {
-        console.error(`Failed to delete email ${emailData.id} from Gmail:`, error.message);
+        console.error(`Failed to trash email ${emailData.id} from Gmail:`, error.message);
         errors.push({ emailId: emailData.id, error: error.message });
       }
     }
