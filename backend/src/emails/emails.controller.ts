@@ -67,34 +67,46 @@ export class EmailsController {
   async bulkDelete(@Body() body: { emailIds: string[] }, @Req() req) {
     console.log(`Bulk delete request for ${body.emailIds.length} emails`);
     
-    // Delete emails from database
-    await this.emailsService.bulkDelete(body.emailIds, req.user.userId);
-    
-    // Optionally delete from Gmail as well
     const user = await this.usersService.findOne(req.user.userId);
     if (!user) {
       console.error('User not found for Gmail deletion');
+      // Still delete from database even if user not found
+      await this.emailsService.bulkDelete(body.emailIds, req.user.userId);
       return { success: true, deleted: body.emailIds.length, gmailDeleted: 0 };
     }
 
-    let gmailDeletedCount = 0;
-    const errors: Array<{ emailId: string; error: string }> = [];
-    
+    // Get Gmail message IDs BEFORE deleting from db
+    const emailsToDelete: Array<{ id: string; googleMessageId: string }> = [];
     for (const emailId of body.emailIds) {
       try {
         const email = await this.emailsService.findOne(emailId, req.user.userId);
-        if (!email) {
-          console.warn(`Email ${emailId} not found in database`);
-          continue;
+        if (email && email.googleMessageId) {
+          emailsToDelete.push({ id: emailId, googleMessageId: email.googleMessageId });
+        } else {
+          console.warn(`Email ${emailId} not found or missing googleMessageId`);
         }
-        
-        console.log(`Attempting to delete Gmail message: ${email.googleMessageId}`);
-        await this.gmailService.permanentlyDeleteMessage(user, email.googleMessageId);
-        gmailDeletedCount++;
-        console.log(`Successfully deleted from Gmail: ${email.googleMessageId}`);
       } catch (error) {
-        console.error(`Failed to delete email ${emailId} from Gmail:`, error.message);
-        errors.push({ emailId, error: error.message });
+        console.error(`Error fetching email ${emailId}:`, error.message);
+      }
+    }
+    
+    // Now delete from database
+    await this.emailsService.bulkDelete(body.emailIds, req.user.userId);
+    console.log(`Deleted ${body.emailIds.length} emails from database`);
+
+    // Delete from Gmail
+    let gmailDeletedCount = 0;
+    const errors: Array<{ emailId: string; error: string }> = [];
+    
+    for (const emailData of emailsToDelete) {
+      try {
+        console.log(`Attempting to delete Gmail message: ${emailData.googleMessageId}`);
+        await this.gmailService.permanentlyDeleteMessage(user, emailData.googleMessageId);
+        gmailDeletedCount++;
+        console.log(`Successfully deleted from Gmail: ${emailData.googleMessageId}`);
+      } catch (error) {
+        console.error(`Failed to delete email ${emailData.id} from Gmail:`, error.message);
+        errors.push({ emailId: emailData.id, error: error.message });
       }
     }
 
