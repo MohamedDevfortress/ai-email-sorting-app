@@ -519,9 +519,14 @@ export default function DashboardContent() {
       {/* Unsubscribe Progress Modal */}
       {showUnsubscribeModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-semibold">Unsubscribing...</h3>
+              <h3 className="text-lg font-semibold">
+                {unsubscribeProgress?.status === 'completed' ? '✓ Unsubscribe Complete' :
+                 unsubscribeProgress?.status === 'failed' ? '✗ Unsubscribe Failed' :
+                 unsubscribeProgress?.status === 'active' ? 'Unsubscribing...' :
+                 'Starting Unsubscribe...'}
+              </h3>
               <button
                 onClick={() => {
                   setShowUnsubscribeModal(false);
@@ -544,18 +549,21 @@ export default function DashboardContent() {
                   <span className="font-medium capitalize">{unsubscribeProgress.status}</span>
                 </div>
                 
-                {unsubscribeProgress.progress !== undefined && (
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Progress:</span>
-                      <span className="font-medium">{unsubscribeProgress.progress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${unsubscribeProgress.progress}%` }}
-                      />
-                    </div>
+                {unsubscribeProgress && (
+                <div>
+                  <div className="mb-2 text-sm text-gray-600">
+                    Progress: {typeof unsubscribeProgress.progress === 'number' ? unsubscribeProgress.progress : 0}%
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                    <div 
+                      className={`h-2.5 rounded-full transition-all duration-300 ${
+                        unsubscribeProgress.status === 'completed' ? 'bg-green-600' :
+                        unsubscribeProgress.status === 'failed' ? 'bg-red-600' :
+                        'bg-blue-600'
+                      }`}
+                      style={{ width: `${typeof unsubscribeProgress.progress === 'number' ? unsubscribeProgress.progress : 0}%` }}
+                    ></div>
+                  </div>
                   </div>
                 )}
 
