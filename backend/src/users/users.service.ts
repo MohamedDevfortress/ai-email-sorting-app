@@ -263,6 +263,9 @@ export class UsersService {
           
           // Clear all user relationships from this group first
           for (const user of group.users) {
+            if (!user.accountGroups) {
+              user.accountGroups = [];
+            }
             user.accountGroups = user.accountGroups.filter(g => g.id !== group.id);
             await this.usersRepository.save(user);
           }
