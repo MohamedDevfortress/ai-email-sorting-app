@@ -236,6 +236,36 @@ export class UsersService {
   }
 
   async removeConnectedAccount(accountId: string) {
-    return this.connectedAccountRepository.delete(accountId);
+    // Find the user to remove
+    const userToRemove = await this.usersRepository.findOne({
+      where: { id: accountId },
+      relations: ['accountGroups', 'accountGroups.users'],
+    });
+
+    if (!userToRemove) {
+      console.error(`User ${accountId} not found`);
+      return;
+    }
+
+    // Remove user from all account groups
+    if (userToRemove.accountGroups && userToRemove.accountGroups.length > 0) {
+      for (const group of userToRemove.accountGroups) {
+        // Remove this user from the group
+        group.users = group.users.filter(u => u.id !== accountId);
+        
+        // If group now has 0 or 1 users, delete the group entirely
+        if (group.users.length <= 1) {
+          await this.accountGroupRepository.delete(group.id);
+        } else {
+          await this.accountGroupRepository.save(group);
+        }
+      }
+      
+      // Clear the user's account groups
+      userToRemove.accountGroups = [];
+      await this.usersRepository.save(userToRemove);
+    }
+
+    console.log(`Successfully removed user ${accountId} from account groups`);
   }
 }

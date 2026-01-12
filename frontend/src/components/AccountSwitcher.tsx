@@ -63,7 +63,12 @@ export default function AccountSwitcher({ token }: AccountSwitcherProps) {
     }
   };
 
-  const handleRemoveAccount = async (accountId: string) => {
+  const handleRemoveAccount = async (accountId: string, isActive: boolean) => {
+    if (isActive) {
+      alert('Cannot remove the active account. Switch to another account first.');
+      return;
+    }
+
     if (!confirm('Are you sure you want to disconnect this account?')) return;
 
     try {
@@ -169,13 +174,26 @@ export default function AccountSwitcher({ token }: AccountSwitcherProps) {
                     Switch
                   </Button>
                 )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleRemoveAccount(account.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                                <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={account.isActive}
+                            onClick={() => handleRemoveAccount(account.id, account.isActive)}
+                            className={`text-red-600 hover:text-red-700 hover:bg-red-50 ${account.isActive ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        {account.isActive && (
+                          <TooltipContent>
+                            <p>Cannot remove active account</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
               </div>
             </div>
           ))
