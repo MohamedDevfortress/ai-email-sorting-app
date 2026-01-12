@@ -65,25 +65,45 @@ export class EmailsController {
 
   @Delete('bulk')
   async bulkDelete(@Body() body: { emailIds: string[] }, @Req() req) {
+    console.log(`Bulk delete request for ${body.emailIds.length} emails`);
+    
     // Delete emails from database
     await this.emailsService.bulkDelete(body.emailIds, req.user.userId);
     
     // Optionally delete from Gmail as well
     const user = await this.usersService.findOne(req.user.userId);
-    if (user) {
-      for (const emailId of body.emailIds) {
+    if (!user) {
+      console.error('User not found for Gmail deletion');
+      return { success: true, deleted: body.emailIds.length, gmailDeleted: 0 };
+    }
+
+    let gmailDeletedCount = 0;
+    const errors: Array<{ emailId: string; error: string }> = [];
+    
+    for (const emailId of body.emailIds) {
+      try {
         const email = await this.emailsService.findOne(emailId, req.user.userId);
-        if (email) {
-          try {
-            await this.gmailService.deleteMessage(user, email.googleMessageId);
-          } catch (error) {
-            console.error(`Failed to delete email ${emailId} from Gmail:`, error);
-          }
+        if (!email) {
+          console.warn(`Email ${emailId} not found in database`);
+          continue;
         }
+        
+        console.log(`Attempting to delete Gmail message: ${email.googleMessageId}`);
+        await this.gmailService.permanentlyDeleteMessage(user, email.googleMessageId);
+        gmailDeletedCount++;
+        console.log(`Successfully deleted from Gmail: ${email.googleMessageId}`);
+      } catch (error) {
+        console.error(`Failed to delete email ${emailId} from Gmail:`, error.message);
+        errors.push({ emailId, error: error.message });
       }
     }
 
-    return { success: true, deleted: body.emailIds.length };
+    return { 
+      success: true, 
+      deleted: body.emailIds.length,
+      gmailDeleted: gmailDeletedCount,
+      errors: errors.length > 0 ? errors : undefined
+    };
   }
 
   @Post('unsubscribe')
