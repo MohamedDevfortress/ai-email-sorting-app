@@ -247,21 +247,37 @@ export class UsersService {
       return;
     }
 
-    // Remove user from all account groups
+    console.log(`Removing user ${accountId} from account groups`);
+
+    // Process each account group the user is in
     if (userToRemove.accountGroups && userToRemove.accountGroups.length > 0) {
       for (const group of userToRemove.accountGroups) {
-        // Remove this user from the group
-        group.users = group.users.filter(u => u.id !== accountId);
+        console.log(`Processing group ${group.id} with ${group.users.length} users`);
         
-        // If group now has 0 or 1 users, delete the group entirely
-        if (group.users.length <= 1) {
+        // Remove this user from the group's users array
+        const otherUsers = group.users.filter(u => u.id !== accountId);
+        
+        // If group will have 0 or 1 users after removal, delete it
+        if (otherUsers.length <= 1) {
+          console.log(`Group ${group.id} will have ${otherUsers.length} users, deleting group`);
+          
+          // Clear all user relationships from this group first
+          for (const user of group.users) {
+            user.accountGroups = user.accountGroups.filter(g => g.id !== group.id);
+            await this.usersRepository.save(user);
+          }
+          
+          // Now safe to delete the group
           await this.accountGroupRepository.delete(group.id);
         } else {
+          // Group will still have multiple users, just remove this one
+          console.log(`Group ${group.id} will have ${otherUsers.length} users, keeping group`);
+          group.users = otherUsers;
           await this.accountGroupRepository.save(group);
         }
       }
       
-      // Clear the user's account groups
+      // Clear the user's account groups reference
       userToRemove.accountGroups = [];
       await this.usersRepository.save(userToRemove);
     }
